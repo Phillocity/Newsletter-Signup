@@ -1,65 +1,56 @@
-import express from 'express';
-import fetch from 'node-fetch';
-import bodyParser from 'body-parser';
-import 'dotenv/config'
-import {fileURLToPath} from 'url';
-import {dirname} from 'path';
-import {resourceLimits} from 'worker_threads';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
+"use strict";
+const express = require("express");
+const bodyParser = require("body-parser");
+const dotenv = require("dotenv").config();
+const axios = require("axios");
 const app = express();
-app.use(express.static("public"))
-app.listen(8080)
+app.use(express.static("public"));
+app.listen(process.env.PORT || 8080);
 app.use(bodyParser.urlencoded({
-    extended: true
+    extended: true,
 }));
-
-const listId = "55381e217f"
-const apiKey = process.env.MAILCHIMP_API_KEY
-const serverPrefix = "us10"
-
-app.get("/", (req, res) => {
+const listId = "55381e217f";
+const apiKey = process.env.MAILCHIMP_API_KEY;
+const serverPrefix = "us10";
+app.get("/", (res) => {
     res.sendFile(__dirname + "/signup.html");
 });
-
 app.post("/", (req, res) => {
     const firstName = req.body.fname;
     const lastName = req.body.lname;
     const email = req.body.email;
-
     const data = {
-        members: [{
-            email_address: email,
-            status: "subscribed",
-            merge_fields: {
-                FNAME: firstName,
-                LNAME: lastName
-            }
-        }]
-    }
-    const url = `https://${serverPrefix}.api.mailchimp.com/3.0/lists/${listId}`
+        members: [
+            {
+                email_address: email,
+                status: "subscribed",
+                merge_fields: {
+                    FNAME: firstName,
+                    LNAME: lastName,
+                },
+            },
+        ],
+    };
+    const url = `https://${serverPrefix}.api.mailchimp.com/3.0/lists/${listId}`;
     const jsonData = JSON.stringify(data);
-    const auth = 'Basic ' + Buffer.from("phillip1" + ':' + apiKey).toString('base64');
-    const options = {
-        method: "POST",
-        headers: {
-            Authorization: auth
+    const axiosConig = {
+        auth: {
+            username: "phillip1",
+            password: apiKey,
         },
-        body: jsonData
-    }
-
-    fetch(url, options)
-        .then(response => {
-            if (response.ok) {
-                res.sendFile(__dirname + "/success.html");
-            } else {
-                res.sendFile(__dirname + "/failure.html");
-            }
-        })
-})
-
-app.post("/failure", (req, res) => {
+        headers: {
+            "Content-Type": "application/json",
+        },
+    };
+    axios.post(url, jsonData, axiosConig).then((response) => {
+        if (response.status === 200) {
+            res.sendFile(__dirname + "/success.html");
+        }
+        else {
+            res.sendFile(__dirname + "/failure.html");
+        }
+    });
+});
+app.post("/failure", (res) => {
     res.redirect("/");
-})
+});
